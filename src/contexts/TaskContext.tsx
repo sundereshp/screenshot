@@ -61,7 +61,7 @@ interface TaskContextType {
   keyboardCount: number;
   mouseCount: number;
   loadProjects: () => Promise<Project[]>;
-  loadTasks: (projectId?: number | null) => Promise<Task[]>;
+  loadTasks: (projectId?: number | null, parentId?: number | null, level?: number) => Promise<Task[]>;
   getTaskActivity: (taskId: number) => TaskActivity;
   setTaskSelection: (selection: Partial<TaskSelection>) => void;
   startTimer: (projectId: number, taskId: number) => void;
@@ -180,12 +180,27 @@ const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   }, [timer]);
 
 
-  const loadTasks = useCallback(async (projectId?: number | null): Promise<Task[]> => {
+  // In TaskContext.tsx
+
+  // In TaskContext.tsx
+  const loadTasks = useCallback(async (
+    projectId?: number | null,
+    parentId?: number | null,
+    level?: number
+  ): Promise<Task[]> => {
     try {
       setLoading(true);
-      // Convert null to undefined since fetchTasks expects number | undefined
-      const data = await fetchTasks(projectId === null ? undefined : projectId);
-      setTasks(data);
+      const data = await fetchTasks(
+        projectId === null ? undefined : projectId,
+        parentId === null ? undefined : parentId,
+        level
+      );
+
+      // If loading top-level tasks, update the tasks state
+      if (level === 1 || level === undefined) {
+        setTasks(data);
+      }
+
       return data;
     } catch (err) {
       setError('Failed to load tasks');
@@ -195,21 +210,31 @@ const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       setLoading(false);
     }
   }, [fetchTasks]);
+
   const loadProjects = useCallback(async () => {
     try {
       const data = await fetchProjects();
       setProjects(data);
+
       // Only set initial project if we don't have one selected
       if (selectedProjectId === null && data.length > 0) {
-        setSelectedProjectId(data[0].id);
-        await loadTasks(data[0].id);
+        const firstProjectId = data[0].id;
+        setSelectedProjectId(firstProjectId);
+        // Load tasks for the first project
+        await loadTasks(firstProjectId);
       }
+
       return data;
     } catch (error) {
       console.error('Failed to load projects:', error);
       return [];
     }
   }, [loadTasks, selectedProjectId]);
+
+  // Add this effect to load projects on mount
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
   useEffect(() => {
     const loadInitialData = async () => {
       const projects = await loadProjects();

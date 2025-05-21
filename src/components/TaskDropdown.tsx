@@ -1,195 +1,141 @@
+// In TaskDropDown.tsx
 import React, { useEffect, useState } from 'react';
-import { useTaskContext, Task, TaskStatus } from '../contexts/TaskContext';
+import { useTaskContext, Task } from '../contexts/TaskContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useTheme } from '../contexts/ThemeContext';
 
 interface TaskDropdownProps {
   projectId: number | null;
+  level?: number;
+  parentId?: number | null;
   onTaskSelect: (task: Task) => void;
   disabled?: boolean;
 }
 
-const StatusBadge: React.FC<{ status: TaskStatus }> = ({ status }) => {
-  const statusClass = `status-${status.replace(' ', '-').toLowerCase()}`;
-  return (
-    <span className={`status-badge ${statusClass}`}>
-      {status}
-    </span>
-  );
-};
+const levelTitles = ['Task', 'Subtask', 'Action', 'Subaction'];
 
-const TaskDropdown: React.FC<TaskDropdownProps> = ({
+export const TaskDropdown: React.FC<TaskDropdownProps> = ({
   projectId,
+  level = 1,
+  parentId = null,
   onTaskSelect,
   disabled = false,
 }) => {
-  const { tasks, loading, error } = useTaskContext();
-  const { isDarkMode } = useTheme();
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const { loadTasks, tasks: allTasks } = useTaskContext();
+  const [selectedTasks, setSelectedTasks] = useState<{ [key: number]: Task | null }>({
+    1: null,
+    2: null,
+    3: null,
+    4: null,
+  });
 
-  // Filter tasks by project
-  // In TaskDropdown.tsx
-  const projectTasks = React.useMemo(() =>
-    tasks.filter(task => task.projectId === projectId),
-    [tasks, projectId]
-  );
+  // Load tasks for the current level
+  useEffect(() => {
+    const fetchTasks = async () => {
+      if (projectId != null) {
+        // Always load all tasks for the project first
+        await loadTasks(projectId);
+      }
+    };
+    fetchTasks();
+  }, [projectId, loadTasks]);
 
-  // Group tasks by level
-  const level1Tasks = projectTasks.filter(task => task.level === 1);
-  const level2Tasks = projectTasks.filter(task => task.level === 2);
-  const level3Tasks = projectTasks.filter(task => task.level === 3);
-  const level4Tasks = projectTasks.filter(task => task.level === 4);
+  // Get tasks for each level
+  // In TaskDropDown.tsx
+  // In TaskDropDown.tsx
+  // In TaskDropDown.tsx
+  const getTasksForLevel = (lvl: number): Task[] => {
+    if (lvl === 1) {
+      // For level 1, return all top-level tasks (parentId is null)
+      return allTasks.filter(task => task.level === 1 && task.parentId === null);
+    }
 
-  // Handle task selection
-  const handleTaskSelect = (task: Task) => {
-    setSelectedTask(task);
-    onTaskSelect(task);
+    // For levels > 1, find the selected parent task
+    const parentTask = selectedTasks[lvl - 1];
+    if (!parentTask) return []; // No parent selected, so no children to show
+
+    // Find all tasks that:
+    // 1. Are at the current level
+    // 2. Have a parentId matching the selected parent's id
+    return allTasks.filter(task => {
+      return task.level === lvl && task.parentId === parentTask.id;
+    });
   };
 
-  if (loading) {
-    return (
-      <div className="mb-4">
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Loading tasks...</label>
-          <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse"></div>
-        </div>
-      </div>
-    );
-  }
+  // Update the handleTaskSelect function
+  const handleTaskSelect = (value: string, lvl: number) => {
+    const task = allTasks.find(t => t.id === parseInt(value));
+    if (!task) return;
 
-  if (error) {
-    return (
-      <div className="mb-4 text-red-500 dark:text-red-400">
-        Error loading tasks: {error}
-      </div>
-    );
+    setSelectedTasks(prev => ({
+      ...prev,
+      [lvl]: task,
+      // Reset higher levels
+      ...Object.fromEntries(
+        Array.from({ length: 4 - lvl }, (_, i) => [lvl + i + 1, null])
+      )
+    }));
+
+    onTaskSelect(task);
+  };
+  // In TaskDropDown.tsx, inside the component
+  // In TaskDropDown.tsx
+// Remove the console.log from the render method and update the useEffect:
+useEffect(() => {
+  // Only log when in development mode
+  if (process.env.NODE_ENV === 'development') {
+    console.log('TaskDropdown - All tasks:', allTasks);
+    console.log('TaskDropdown - Selected tasks:', selectedTasks);
+    
+    // Log tasks for each level
+    [1, 2, 3, 4].forEach(lvl => {
+      console.log(`Level ${lvl} tasks:`, getTasksForLevel(lvl));
+    });
   }
+}, [allTasks, selectedTasks]); // Only re-run when these dependencies change
+
+  // In the return statement, add:
+  { console.log(`Level ${level} tasks:`, getTasksForLevel(level)) }
 
   if (!projectId) {
-    return (
-      <div className="mb-4 text-foreground/70">
-        Please select a project first
-      </div>
-    );
+    return <div className="mb-4 text-muted-foreground">Please select a project first</div>;
   }
 
   return (
     <div className="space-y-4">
-      {/* Level 1 Tasks */}
-      <div>
-        <label className="block text-sm font-medium mb-1">Task</label>
-        <Select
-          onValueChange={(value) => {
-            const task = level1Tasks.find(t => t.id === parseInt(value));
-            if (task) handleTaskSelect(task);
-          }}
-          disabled={disabled || level1Tasks.length === 0}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select a task" />
-          </SelectTrigger>
-          <SelectContent>
-            {level1Tasks.map((task) => (
-              <SelectItem key={task.id} value={task.id.toString()}>
-                <div className="flex items-center gap-2">
-                  <span>{task.name}</span>
-                  <StatusBadge status={task.status} />
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {[1, 2, 3, 4].map((lvl) => {
+        // Only show the level if it's the first level or if the previous level has a selection
+        const shouldShow = lvl === 1 || selectedTasks[lvl - 1] !== null;
+        if (!shouldShow) return null;
 
-      {/* Level 2 Tasks - Only show if a level 1 task is selected */}
-      {selectedTask?.level === 1 && level2Tasks.some(t => t.level1ID === selectedTask.id) && (
-        <div>
-          <label className="block text-sm font-medium mb-1">Subtask</label>
-          <Select
-            onValueChange={(value) => {
-              const task = level2Tasks.find(t => t.id === parseInt(value));
-              if (task) handleTaskSelect(task);
-            }}
-            disabled={disabled}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select a subtask" />
-            </SelectTrigger>
-            <SelectContent>
-              {level2Tasks
-                .filter(task => task.level1ID === selectedTask.id)
-                .map((task) => (
+        const tasksForLevel = getTasksForLevel(lvl);
+        const levelTitle = levelTitles[lvl - 1];
+
+        return (
+          <div key={lvl} className="space-y-2">
+            <h3 className="text-sm font-medium">{levelTitle}</h3>
+            <Select
+              value={selectedTasks[lvl]?.id.toString() || ''}
+              onValueChange={(value) => handleTaskSelect(value, lvl)}
+              disabled={disabled || tasksForLevel.length === 0}  // Removed ?.
+            >
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={tasksForLevel.length > 0  // Removed ?.
+                    ? `Select ${levelTitle.toLowerCase()}`
+                    : `No ${levelTitle.toLowerCase()}s available`}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {tasksForLevel.map(task => (
                   <SelectItem key={task.id} value={task.id.toString()}>
-                    <div className="flex items-center gap-2">
-                      <span>{task.name}</span>
-                      <StatusBadge status={task.status} />
-                    </div>
+                    {task.name}
                   </SelectItem>
                 ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {/* Level 3 Tasks - Only show if a level 2 task is selected */}
-      {selectedTask?.level === 2 && level3Tasks.some(t => t.level2ID === selectedTask.id) && (
-        <div>
-          <label className="block text-sm font-medium mb-1">Action</label>
-          <Select
-            onValueChange={(value) => {
-              const task = level3Tasks.find(t => t.id === parseInt(value));
-              if (task) handleTaskSelect(task);
-            }}
-            disabled={disabled}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select an action" />
-            </SelectTrigger>
-            <SelectContent>
-              {level3Tasks
-                .filter(task => task.level2ID === selectedTask.id)
-                .map((task) => (
-                  <SelectItem key={task.id} value={task.id.toString()}>
-                    <div className="flex items-center gap-2">
-                      <span>{task.name}</span>
-                      <StatusBadge status={task.status} />
-                    </div>
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {/* Level 4 Tasks - Only show if a level 3 task is selected */}
-      {selectedTask?.level === 3 && level4Tasks.some(t => t.level3ID === selectedTask.id) && (
-        <div>
-          <label className="block text-sm font-medium mb-1">Subaction</label>
-          <Select
-            onValueChange={(value) => {
-              const task = level4Tasks.find(t => t.id === parseInt(value));
-              if (task) handleTaskSelect(task);
-            }}
-            disabled={disabled}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select a subaction" />
-            </SelectTrigger>
-            <SelectContent>
-              {level4Tasks
-                .filter(task => task.level3ID === selectedTask.id)
-                .map((task) => (
-                  <SelectItem key={task.id} value={task.id.toString()}>
-                    <div className="flex items-center gap-2">
-                      <span>{task.name}</span>
-                      <StatusBadge status={task.status} />
-                    </div>
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      })}
     </div>
   );
 };

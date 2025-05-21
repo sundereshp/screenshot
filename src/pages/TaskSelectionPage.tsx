@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTaskContext } from '../contexts/TaskContext';
+import { Task, useTaskContext } from '../contexts/TaskContext';
 import Navbar from '../components/Navbar';
-import TaskDropdown from '../components/TaskDropdown';
+import { TaskDropdown } from '../components/TaskDropdown';
 import StartButton from '../components/StartButton';
 import { TaskSelection } from '../contexts/TaskContext';
 import { Card } from '@/components/ui/card';
@@ -66,11 +66,12 @@ const TaskSelectionPage: React.FC<TaskSelectionPageProps> = ({
   }, [loadTasks, setTaskSelection]);
 
 
+  // Update the project change handler
   const handleProjectChange = async (value: string) => {
     const projectId = parseInt(value, 10);
     setSelectedProjectId(projectId);
     try {
-      await loadTasks(projectId);
+      // Reset task selection when project changes
       setTaskSelection({
         projectId,
         level1Id: null,
@@ -78,11 +79,20 @@ const TaskSelectionPage: React.FC<TaskSelectionPageProps> = ({
         level3Id: null,
         level4Id: null
       });
+      await loadTasks(projectId);
     } catch (error) {
-      console.error('Failed to load tasks for project:', error);
+      console.error('Failed to load tasks:', error);
     }
   };
 
+  // In TaskSelectionPage.tsx
+  const handleTaskSelect = (task: Task) => {
+    const selection: Partial<TaskSelection> = {
+      [`level${task.level}Id`]: task.id,
+      projectId: task.projectId
+    };
+    setTaskSelection(selection);
+  };
 
   const handleStart = () => {
     const taskId = taskSelection.level4Id ||
@@ -126,31 +136,17 @@ const TaskSelectionPage: React.FC<TaskSelectionPageProps> = ({
                   ))}
                 </SelectContent>
               </Select>
-
             </div>
 
-            <div>
-              <h2 className="text-lg font-semibold mb-2">Select Task</h2>
-              <TaskDropdown
-                projectId={selectedProjectId}
-                onTaskSelect={(task) => {
-                  setTaskSelection({
-                    level1Id: task.level1ID,
-                    level2Id: task.level2ID,
-                    level3Id: task.level3ID,
-                    level4Id: task.level4ID,
-                    projectId: selectedProjectId || 0
-                  });
-                }}
-              />
-            </div>
-
-            <div className="pt-4">
-              <StartButton
-                onStart={handleStart}
-                disabled={!isTaskSelected || !canNavigateToTimer}
-              />
-            </div>
+            {selectedProjectId && (
+              <div>
+                <h2 className="text-lg font-semibold mb-2">Select Task</h2>
+                <TaskDropdown
+                  projectId={selectedProjectId}
+                  onTaskSelect={handleTaskSelect}
+                />
+              </div>
+            )}
           </div>
         </Card>
       </div>
