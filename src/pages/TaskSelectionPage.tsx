@@ -47,10 +47,10 @@ const TaskSelectionPage: React.FC<TaskSelectionPageProps> = ({
         const data = await fetchProjects();
         if (data.length > 0) {
           // Set initial project ID to first project
-          setSelectedProjectId(data[0].id);
-          await loadTasks(data[0].id);
+          setSelectedProjectId(selectedProjectId);
+          await loadTasks(selectedProjectId);
           setTaskSelection({
-            projectId: data[0].id,
+            projectId: selectedProjectId,
             level1Id: null,
             level2Id: null,
             level3Id: null,

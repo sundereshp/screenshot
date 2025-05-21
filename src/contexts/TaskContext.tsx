@@ -61,7 +61,7 @@ interface TaskContextType {
   keyboardCount: number;
   mouseCount: number;
   loadProjects: () => Promise<Project[]>;
-  loadTasks: (projectId?: number) => Promise<Task[]>;
+  loadTasks: (projectId?: number | null) => Promise<Task[]>;
   getTaskActivity: (taskId: number) => TaskActivity;
   setTaskSelection: (selection: Partial<TaskSelection>) => void;
   startTimer: (projectId: number, taskId: number) => void;
@@ -180,17 +180,17 @@ const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   }, [timer]);
 
 
-  const loadTasks = useCallback(async (projectId?: number): Promise<Task[]> => {
+  const loadTasks = useCallback(async (projectId?: number | null): Promise<Task[]> => {
     try {
       setLoading(true);
-      const data = await fetchTasks(projectId);
+      // Convert null to undefined since fetchTasks expects number | undefined
+      const data = await fetchTasks(projectId === null ? undefined : projectId);
       setTasks(data);
-      setError(null);
-      return data; // Add this line to return the tasks
+      return data;
     } catch (err) {
       setError('Failed to load tasks');
       console.error('Error loading tasks:', err);
-      return []; // Return empty array in case of error
+      return [];
     } finally {
       setLoading(false);
     }
