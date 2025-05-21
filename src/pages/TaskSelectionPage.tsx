@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { data, useNavigate } from 'react-router-dom';
 import { Task, useTaskContext } from '../contexts/TaskContext';
 import Navbar from '../components/Navbar';
 import { TaskDropdown } from '../components/TaskDropdown';
@@ -40,22 +40,17 @@ const TaskSelectionPage: React.FC<TaskSelectionPageProps> = ({
 
 
   // Update the useEffect that loads projects
-  // In TaskSelectionPage.tsx
+
+
   useEffect(() => {
     const loadInitialData = async () => {
       try {
         const data = await fetchProjects();
-        if (data.length > 0) {
-          // Set initial project ID to first project
-          setSelectedProjectId(selectedProjectId);
-          await loadTasks(selectedProjectId);
-          setTaskSelection({
-            projectId: selectedProjectId,
-            level1Id: null,
-            level2Id: null,
-            level3Id: null,
-            level4Id: null
-          });
+        if (data.length > 0 && selectedProjectId === null) {
+          // Only set first project if nothing is selected
+          const firstProjectId = data[0].id;
+          setSelectedProjectId(firstProjectId);
+          await loadTasks(firstProjectId, null, 1); // Explicitly load level 1 tasks
         }
       } catch (error) {
         console.error('Failed to load projects:', error);
@@ -63,26 +58,20 @@ const TaskSelectionPage: React.FC<TaskSelectionPageProps> = ({
     };
 
     loadInitialData();
-  }, [loadTasks, setTaskSelection]);
+  }, [loadTasks]); // Add selectedProjectId to dependencies if you want to handle changes
 
-
-  // Update the project change handler
-  const handleProjectChange = async (value: string) => {
-    const projectId = parseInt(value, 10);
+  // Add this handler for project selection
+  const handleProjectChange = async (projectId: number) => {
     setSelectedProjectId(projectId);
-    try {
-      // Reset task selection when project changes
-      setTaskSelection({
-        projectId,
-        level1Id: null,
-        level2Id: null,
-        level3Id: null,
-        level4Id: null
-      });
-      await loadTasks(projectId);
-    } catch (error) {
-      console.error('Failed to load tasks:', error);
-    }
+    await loadTasks(projectId, null, 1); // Load level 1 tasks for the selected project
+    // Reset task selection
+    setTaskSelection({
+      projectId,
+      level1Id: null,
+      level2Id: null,
+      level3Id: null,
+      level4Id: null
+    });
   };
 
   // In TaskSelectionPage.tsx
@@ -123,7 +112,7 @@ const TaskSelectionPage: React.FC<TaskSelectionPageProps> = ({
               <h2 className="text-lg font-semibold mb-2">Select Project</h2>
               <Select
                 value={selectedProjectId?.toString() || ''}
-                onValueChange={handleProjectChange}
+                onValueChange={(value) => handleProjectChange(parseInt(value, 10))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a project" />

@@ -43,23 +43,34 @@ export const TaskDropdown: React.FC<TaskDropdownProps> = ({
   // In TaskDropDown.tsx
   // In TaskDropDown.tsx
   // In TaskDropDown.tsx
+  
   const getTasksForLevel = (lvl: number): Task[] => {
+    console.log('getTasksForLevel - level:', lvl, 'projectId:', projectId);
+    
+    // For level 1, return tasks with null parentID
     if (lvl === 1) {
-      // For level 1, return all top-level tasks (parentId is null)
-      return allTasks.filter(task => task.level === 1 && task.parentId === null);
+      const tasks = allTasks.filter(task => 
+        task.level === 1 && 
+        task.parentId === null &&
+        task.projectId === projectId
+      );
+      console.log('Level 1 tasks:', tasks);
+      return tasks;
     }
-
-    // For levels > 1, find the selected parent task
+  
+    // For higher levels, filter by parent task
     const parentTask = selectedTasks[lvl - 1];
-    if (!parentTask) return []; // No parent selected, so no children to show
-
-    // Find all tasks that:
-    // 1. Are at the current level
-    // 2. Have a parentId matching the selected parent's id
-    return allTasks.filter(task => {
-      return task.level === lvl && task.parentId === parentTask.id;
-    });
+    const tasks = parentTask 
+      ? allTasks.filter(task => 
+          task.level === lvl &&
+          task.parentId === parentTask.id
+        )
+      : [];
+    
+    console.log(`Level ${lvl} tasks:`, tasks);
+    return tasks;
   };
+  
 
   // Update the handleTaskSelect function
   const handleTaskSelect = (value: string, lvl: number) => {

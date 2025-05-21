@@ -190,26 +190,31 @@ const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   ): Promise<Task[]> => {
     try {
       setLoading(true);
-      const data = await fetchTasks(
-        projectId === null ? undefined : projectId,
-        parentId === null ? undefined : parentId,
+      // For level 1 tasks, we pass the projectId as both projectId and parentId
+      // This matches our API's expectation that level 1 tasks have parentID = projectID
+      const tasks = await fetchTasks(
+        projectId || undefined,
+        level === 1 ? projectId : (parentId || undefined),
         level
       );
 
-      // If loading top-level tasks, update the tasks state
-      if (level === 1 || level === undefined) {
-        setTasks(data);
+      // Update the tasks state if we're loading top-level tasks
+      if (level === 1) {
+        setTasks(prevTasks => {
+          // Keep existing tasks that aren't for this project
+          const otherTasks = prevTasks.filter(t => t.projectId !== projectId);
+          return [...otherTasks, ...tasks];
+        });
       }
 
-      return data;
-    } catch (err) {
-      setError('Failed to load tasks');
-      console.error('Error loading tasks:', err);
-      return [];
+      return tasks;
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      return []; // Return empty array on error
     } finally {
       setLoading(false);
     }
-  }, [fetchTasks]);
+  }, []);
 
   const loadProjects = useCallback(async () => {
     try {
