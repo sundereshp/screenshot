@@ -1,20 +1,12 @@
-import React from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
+import App from './App';
 import './index.css';
-import { TaskProvider } from './context/TaskContext';
-import { ThemeProvider } from './context/ThemeContext';
 
 const container = document.getElementById('root');
-if (!container) throw new Error('Failed to find the root element');
-const root = createRoot(container);
+const root = createRoot(container!);
 
 root.render(
-  <React.StrictMode>
-    <ThemeProvider>
-      <TaskProvider>
-        <App />
-      </TaskProvider>
-    </ThemeProvider>
-  </React.StrictMode>
+  // <React.StrictMode>
+    <App />
+  // </React.StrictMode>
 );

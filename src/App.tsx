@@ -1,60 +1,27 @@
-import React, { useState } from 'react';
+
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Navigation from './components/Navigation';
-import Settings from './components/Settings';
-import Sidebar from './components/Sidebar';
-import TaskDetails from './components/TaskDetails';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Index from "./pages/Index";
+import NotFound from "./pages/NotFound";
 
-const App = () => {
-  const [showSettings, setShowSettings] = useState(false);
+const queryClient = new QueryClient();
 
-  const handleOpenSettings = () => setShowSettings(true);
-  const handleCloseSettings = () => setShowSettings(false);
-  
-  const handleQuit = () => {
-    if (window.electron && typeof window.electron.quit === 'function') {
-      window.electron.quit();
-    } else {
-      console.log('Quit requested - running in browser mode');
-      // Optional: Provide browser fallback behavior
-      if (window.confirm('Are you sure you want to quit?')) {
-        window.close();
-      }
-    }
-  };
-
-  return (
-    <div className="flex h-screen bg-background text-foreground">
-      <TooltipProvider>
-        {/* Sidebar */}
-        <div className="w-80 border-r border-border">
-          <Sidebar />
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Task Details */}
-          <div className="flex-1 overflow-auto">
-            <TaskDetails />
-          </div>
-
-          {/* Navigation */}
-          <Navigation 
-            onOpenSettings={handleOpenSettings}
-            onQuit={handleQuit}
-          />
-        </div>
-
-        {/* Settings Modal */}
-        {showSettings && (
-          <Settings onClose={handleCloseSettings} />
-        )}
-
-        <Toaster />
-      </TooltipProvider>
-    </div>
-  );
-};
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/*" element={<Index />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
